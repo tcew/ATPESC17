@@ -20,14 +20,12 @@ int testpoint(d_complex c){
   
   d_complex z;
   
-  int iter;
-  double temp;
-  
   z = c;
   
+  int iter;
   for(iter=0; iter<MXITER; iter++){
     
-    temp = (z.r*z.r) - (z.i*z.i) + c.r;
+    double temp = (z.r*z.r) - (z.i*z.i) + c.r;
     
     z.i = z.r*z.i*2. + c.i;
     z.r = temp;
@@ -49,12 +47,11 @@ int  mandeloutside(){
   d_complex c;
 
   int numoutside = 0;
-
-#pragma omp parallel for reduction(+:numoutside)
+  
   for(i=0;i<NPOINTS;i++){
     for(j=0;j<NPOINTS;j++){
-      c.r = -2. + 2.5*(double)(i)/(double)(NPOINTS)+eps;
-      c.i =       1.125*(double)(j)/(double)(NPOINTS)+eps;
+      c.r = -2. + 2.5*((double)i)/(double)(NPOINTS)+eps;
+      c.i =       1.125*((double)j)/(double)(NPOINTS)+eps;
       numoutside += testpoint(c);
     }
   }
@@ -66,10 +63,11 @@ int main(int argc, char **argv){
 
   double start = omp_get_wtime();
  
-  double numoutside = mandeloutside();
-  
+  int numoutside = mandeloutside();
+ 
   double end = omp_get_wtime();
-  
+
+  printf("numoustide = %d\n", numoutside);
   printf("elapsed = %g\n", end-start);
 
   double area = 2.*2.5*1.125*(NPOINTS*NPOINTS-numoutside)/(NPOINTS*NPOINTS);

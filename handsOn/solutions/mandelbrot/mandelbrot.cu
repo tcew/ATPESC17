@@ -1,5 +1,6 @@
 // to compile on cooley: nvcc  -arch sm_30 -o mandelbrot mandelbrot.cu -lm 
 // to run on cooley:    ./mandelbrot 
+
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,7 +23,7 @@ typedef struct {
 // return 0 if c is inside the mandelbrot set
 
 // TASK 1: annotate this as a device function 
-???? int testpoint(d_complex c){
+__device__ int testpoint(d_complex c){
   
   d_complex z = c;
   
@@ -42,7 +43,7 @@ typedef struct {
   
 }
 
-// FREEBIE: partial reduction DEVICE function
+// FREEBIE: partial reduction 
 __device__ void partialReduction(int outside, int *outsideCounts){
   
   __shared__ int s_outside[TX*TY];
@@ -71,7 +72,7 @@ __device__ void partialReduction(int outside, int *outsideCounts){
 //           x [blockIdx.y*blockDim.y,(blockIdx.y+1)*blockDim.y) 
 
 // TASK 2a: annotate this to indicate it is a kernel and change return type to void
-???? void mandeloutside(int * outsideCounts){
+__global__ void mandeloutside(int * outsideCounts){
 
   double eps = 1e-5;
 
@@ -80,15 +81,15 @@ __device__ void partialReduction(int outside, int *outsideCounts){
   // TASK 2b: replace loop structures with (i,j) defined from blockIdx, blockDim, threadIdx
   //  for(i=0;i<NPOINTS;i++){
   //    for(j=0;j<NPOINTS;j++){
-  int i = ????;
-  int j = ????;
+  int i = threadIdx.x+blockIdx.x*TX; 
+  int j = threadIdx.y+blockIdx.y*TY; 
 
   c.r = -2. + 2.5*((double)i)/(double)(NPOINTS)+eps;
   c.i =       1.125*((double)j)/(double)(NPOINTS)+eps;
   
-  // TASK 2c: check that (i,j) is in bounds
+  // TASK 2c: replace this with a partial sum reduction of numoutside in thread block
   int outside = 0; 
-  if(i<???? && j<???){
+  if(i<NPOINTS && j<NPOINTS){
     outside = testpoint(c);
   }
   //   }
@@ -101,15 +102,15 @@ __device__ void partialReduction(int outside, int *outsideCounts){
 
 int main(int argc, char **argv){
 
-  // TASK 3a: compute the number of blocks in the 2D thread array
-  int GX = ????; // enough blocks in the x direction of size TX to cover NPOINTS
-  int GY = ????; // enough blocks in the y direction of size TY to cover NPOINTS
+  // TASK 3a: define dim3 variables for the grid size and thread-block size
+  int GX = (NPOINTS+TX-1)/TX;
+  int GY = (NPOINTS+TY-1)/TY;
   dim3 dimGrid(GX,GY,1);
   dim3 dimBlock(TX,TY,1);
 
   // TASK 3b: use cudaMalloc to create a DEVICE array that has one entry for each thread-block
   int *c_outsideCounts;
-  cudaMalloc(????);
+  cudaMalloc(&c_outsideCounts, GX*GY*sizeof(int));
 
   // FREEBIE: create CUDA events for timing
   cudaEvent_t start, end;
@@ -119,8 +120,8 @@ int main(int argc, char **argv){
   
   cudaEventRecord(start);
   
-  // TASK 3c: specify the grid size and thread-block size
-  mandeloutside <<< ????, ???? >>> (c_outsideCounts);
+  // TASK 3c: replace this with a kernel call
+  mandeloutside <<< dimGrid, dimBlock >>> (c_outsideCounts);
   
   // FREEBIE: timing
   float elapsed;
@@ -134,9 +135,9 @@ int main(int argc, char **argv){
   int *h_outsideCounts = (int*) calloc(GX*GY, sizeof(int));
   
   // TASK 3e: use cudaMemcpy to copy the contents of the entries of c_outsideCounts to h_outsideCounts
-  cudaMemcpy(????);
+  cudaMemcpy(h_outsideCounts, c_outsideCounts, GX*GY*sizeof(int), cudaMemcpyDeviceToHost);
 
-  // FREEBIE: sum up the outsideCounts on the HOST
+  // TASK 3f: sum up the outsideCounts 
   int numoutside = 0;
   for(int n=0;n<GX*GY;++n){
     numoutside += h_outsideCounts[n];
