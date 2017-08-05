@@ -50,7 +50,7 @@ int  mandeloutside(){
 
   int numoutside = 0;
 
-#pragma omp parallel for reduction(+:numoutside)
+#pragma omp parallel for reduction(+:numoutside) private(j,c)
   for(i=0;i<NPOINTS;i++){
     for(j=0;j<NPOINTS;j++){
       c.r = -2. + 2.5*(double)(i)/(double)(NPOINTS)+eps;
